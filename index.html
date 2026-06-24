@@ -78,6 +78,7 @@
   <button class="btn btn-secondary" onclick="clearResults()">Clear</button>
   <input type="text" id="searchInput" placeholder="Filter by skill, role, city..." oninput="filterCards()">
   <span style="font-size:13px;color:#64748b;margin-left:auto;">10 days lookback • <span id="totalChannels">11</span> channels</span>
+  <span style="font-size:11px;color:#475569;margin-left:8px;">candidates only</span>
 </div>
 
 <div class="stats">
@@ -128,6 +129,17 @@ const CHANNELS = [
   'fullstack_jobs_ru'
 ];
 
+// Must match at least ONE candidate signal to be included
+const CANDIDATE_SIGNALS = [
+  'резюме','ищу работу','ищу позицию','ищу проект','в поиске','в активном поиске',
+  'открыт к предложениям','открыта к предложениям','рассматриваю предложения',
+  'рассматриваю офферы','ищу оффер','хочу работать','хочу найти работу',
+  'готов к переезду','готов к релокации','готова к релокации',
+  'looking for','open to work','open to opportunities','seeking','job search',
+  'available for hire','resume','cv attached','my cv','portfolio','hire me',
+  'ищу удалённую','ищу удаленную','рассмотрю предложения'
+];
+
 const IT_KEYWORDS = [
   'python','javascript','typescript','java','kotlin','swift','golang','go','rust','c++','c#',
   'react','vue','angular','node','django','fastapi','spring','flutter',
@@ -140,11 +152,20 @@ const IT_KEYWORDS = [
   'разработчик','программист','developer','engineer','software',
   'product manager','pm','scrum','agile','jira',
   'ux','ui','дизайнер','figma',
-  'devops','sre','infrastructure','linux','nginx',
+  'sre','infrastructure','linux','nginx',
   'remote','удаленно','удалённо','релокация','relocation'
 ];
 
-const STOP_WORDS = ['куплю','продам','сдам','аренда','квартира','ищу работу НЕТ','спам'];
+// Employer ads — exclude these posts
+const EMPLOYER_STOP_WORDS = [
+  'вакансия','вакансии','мы ищем','приглашаем','нанимаем','открыта позиция',
+  'открытые позиции','join our team','we are hiring','we\'re hiring','now hiring',
+  'job opening','job opportunity','hiring now','looking for a developer',
+  'looking for developers','требуется','требуются','наша команда ищет',
+  'команда ищет','в нашу команду','зарплата от','зп от','з/п от',
+  'условия работы','мы предлагаем','what we offer','job description',
+  'responsibilities include','обязанности:','мы готовы предложить'
+];
 
 let allCandidates = [];
 let currentFilter = 'all';
@@ -240,13 +261,19 @@ function parseMessages(html, channel) {
 
     // Stop word filter
     const lowerText = text.toLowerCase();
-    if (STOP_WORDS.some(w => lowerText.includes(w))) return;
 
-    // Keyword match
+    // Skip employer job ads
+    if (EMPLOYER_STOP_WORDS.some(w => lowerText.includes(w.toLowerCase()))) return;
+
+    // Must have at least one candidate signal (person looking for work)
+    const hasSignal = CANDIDATE_SIGNALS.some(s => lowerText.includes(s.toLowerCase()));
+    if (!hasSignal) return;
+
+    // Keyword match (skills mentioned)
     const matched = IT_KEYWORDS.filter(kw => lowerText.includes(kw.toLowerCase()));
     if (matched.length === 0) return;
 
-    // Score
+    // Score — more skills mentioned = higher quality candidate post
     const score = matched.length >= 5 ? 'high' : matched.length >= 2 ? 'med' : 'low';
 
     // Author
