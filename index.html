@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YQN Talent Radar — IT Candidates</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+  header { background: #1e293b; border-bottom: 1px solid #334155; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 20px; font-weight: 700; color: #f8fafc; }
+  header h1 span { color: #38bdf8; }
+  .subtitle { font-size: 13px; color: #94a3b8; margin-top: 2px; }
+  .controls { background: #1e293b; border-bottom: 1px solid #334155; padding: 16px 24px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+  .btn { padding: 8px 18px; border-radius: 8px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.2s; }
+  .btn-primary { background: #0ea5e9; color: white; }
+  .btn-primary:hover { background: #0284c7; }
+  .btn-primary:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+  .btn-secondary { background: #334155; color: #e2e8f0; }
+  .btn-secondary:hover { background: #475569; }
+  input[type="text"] { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 8px 14px; color: #e2e8f0; font-size: 14px; width: 280px; }
+  input[type="text"]:focus { outline: none; border-color: #0ea5e9; }
+  .stats { display: flex; gap: 16px; padding: 16px 24px; flex-wrap: wrap; }
+  .stat-card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 14px 20px; min-width: 130px; }
+  .stat-card .value { font-size: 28px; font-weight: 700; color: #38bdf8; }
+  .stat-card .label { font-size: 12px; color: #64748b; margin-top: 2px; }
+  .progress-bar { margin: 0 24px 8px; }
+  .progress-track { height: 6px; background: #1e293b; border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #0ea5e9, #38bdf8); border-radius: 3px; transition: width 0.4s ease; }
+  .progress-label { font-size: 12px; color: #64748b; margin-bottom: 4px; }
+  .channel-status { display: flex; gap: 8px; flex-wrap: wrap; padding: 8px 24px 16px; }
+  .ch-badge { font-size: 11px; padding: 3px 10px; border-radius: 20px; border: 1px solid #334155; color: #94a3b8; }
+  .ch-badge.loading { border-color: #0ea5e9; color: #38bdf8; animation: pulse 1s infinite; }
+  .ch-badge.done { border-color: #10b981; color: #10b981; }
+  .ch-badge.error { border-color: #ef4444; color: #ef4444; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+  .candidates-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; padding: 0 24px 24px; }
+  .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px; transition: border-color 0.2s; }
+  .card:hover { border-color: #0ea5e9; }
+  .card-header { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+  .avatar { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #0ea5e9, #6366f1); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .card-meta { flex: 1; min-width: 0; }
+  .card-name { font-weight: 600; font-size: 15px; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card-channel { font-size: 12px; color: #64748b; }
+  .card-date { font-size: 11px; color: #475569; margin-left: auto; white-space: nowrap; }
+  .card-text { font-size: 13px; color: #94a3b8; line-height: 1.6; margin-bottom: 12px; display: -webkit-box; -webkit-line-clamp: 5; -webkit-box-orient: vertical; overflow: hidden; }
+  .card-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #0c1a2e; border: 1px solid #1d4ed8; color: #60a5fa; }
+  .card-footer { display: flex; gap: 8px; }
+  .link-btn { font-size: 12px; padding: 5px 12px; border-radius: 6px; border: 1px solid #334155; background: transparent; color: #94a3b8; cursor: pointer; text-decoration: none; transition: all 0.2s; }
+  .link-btn:hover { border-color: #0ea5e9; color: #38bdf8; }
+  .score-badge { margin-left: auto; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+  .score-high { background: #064e3b; color: #34d399; }
+  .score-med { background: #1c1917; color: #fbbf24; }
+  .score-low { background: #1f1a1a; color: #94a3b8; }
+  .empty-state { text-align: center; padding: 60px 24px; color: #64748b; }
+  .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+  .empty-state p { font-size: 16px; margin-bottom: 8px; }
+  .empty-state small { font-size: 13px; }
+  .filter-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 0 24px 16px; }
+  .filter-btn { font-size: 12px; padding: 4px 12px; border-radius: 20px; border: 1px solid #334155; background: transparent; color: #94a3b8; cursor: pointer; }
+  .filter-btn.active { background: #0ea5e9; border-color: #0ea5e9; color: white; }
+  #log { background: #0a0f1a; border-top: 1px solid #334155; padding: 12px 24px; font-size: 11px; color: #475569; font-family: monospace; max-height: 80px; overflow-y: auto; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>YQN <span>Talent Radar</span></h1>
+    <div class="subtitle">IT Candidates from Telegram — Live Scan</div>
+  </div>
+  <div style="font-size:12px;color:#475569;">Last scan: <span id="lastScan">Never</span></div>
+</header>
+
+<div class="controls">
+  <button class="btn btn-primary" id="scanBtn" onclick="startScan()">🔍 Scan Channels</button>
+  <button class="btn btn-secondary" onclick="clearResults()">Clear</button>
+  <input type="text" id="searchInput" placeholder="Filter by skill, role, city..." oninput="filterCards()">
+  <span style="font-size:13px;color:#64748b;margin-left:auto;">10 days lookback • <span id="totalChannels">11</span> channels</span>
+</div>
+
+<div class="stats">
+  <div class="stat-card"><div class="value" id="statCandidates">0</div><div class="label">Candidates</div></div>
+  <div class="stat-card"><div class="value" id="statChannels">0</div><div class="label">Channels scanned</div></div>
+  <div class="stat-card"><div class="value" id="statHigh">0</div><div class="label">High match</div></div>
+  <div class="stat-card"><div class="value" id="statErrors">0</div><div class="label">Errors</div></div>
+</div>
+
+<div class="progress-bar" id="progressWrap" style="display:none">
+  <div class="progress-label" id="progressLabel">Scanning...</div>
+  <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+</div>
+
+<div class="channel-status" id="channelStatus"></div>
+
+<div class="filter-row" id="filterRow" style="display:none">
+  <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+  <button class="filter-btn" onclick="setFilter('high',this)">🟢 High match</button>
+  <button class="filter-btn" onclick="setFilter('dev',this)">Dev / Engineering</button>
+  <button class="filter-btn" onclick="setFilter('data',this)">Data / AI</button>
+  <button class="filter-btn" onclick="setFilter('pm',this)">PM / Design</button>
+  <button class="filter-btn" onclick="setFilter('devops',this)">DevOps / Infra</button>
+</div>
+
+<div class="candidates-grid" id="grid">
+  <div class="empty-state" style="grid-column:1/-1">
+    <div class="icon">📡</div>
+    <p>No candidates yet</p>
+    <small>Click "Scan Channels" to fetch the latest IT posts</small>
+  </div>
+</div>
+
+<div id="log"></div>
+
+<script>
+const CHANNELS = [
+  'it_vakansii_jobs',
+  'it_ru_jobs',
+  'tproger_jobs',
+  'devops_jobs_ru',
+  'python_jobs_ru',
+  'javascript_jobs',
+  'backend_jobs_ru',
+  'data_science_jobs_ru',
+  'mobile_dev_jobs',
+  'qa_jobs_ru',
+  'fullstack_jobs_ru'
+];
+
+const IT_KEYWORDS = [
+  'python','javascript','typescript','java','kotlin','swift','golang','go','rust','c++','c#',
+  'react','vue','angular','node','django','fastapi','spring','flutter',
+  'sql','postgresql','mysql','mongodb','redis','kafka','rabbitmq',
+  'docker','kubernetes','aws','gcp','azure','terraform','ci/cd','devops',
+  'backend','frontend','fullstack','full-stack','full stack',
+  'data science','machine learning','ml','ai','nlp','computer vision',
+  'android','ios','mobile','react native',
+  'qa','тестировщик','автоматизация тестирования',
+  'разработчик','программист','developer','engineer','software',
+  'product manager','pm','scrum','agile','jira',
+  'ux','ui','дизайнер','figma',
+  'devops','sre','infrastructure','linux','nginx',
+  'remote','удаленно','удалённо','релокация','relocation'
+];
+
+const STOP_WORDS = ['куплю','продам','сдам','аренда','квартира','ищу работу НЕТ','спам'];
+
+let allCandidates = [];
+let currentFilter = 'all';
+let scanning = false;
+
+function log(msg) {
+  const el = document.getElementById('log');
+  el.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+}
+
+function startScan() {
+  if (scanning) return;
+  scanning = true;
+  allCandidates = [];
+  document.getElementById('scanBtn').disabled = true;
+  document.getElementById('scanBtn').textContent = '⏳ Scanning...';
+  document.getElementById('progressWrap').style.display = 'block';
+  document.getElementById('filterRow').style.display = 'none';
+  document.getElementById('channelStatus').innerHTML = '';
+  document.getElementById('grid').innerHTML = '';
+  updateStats();
+
+  const badges = {};
+  CHANNELS.forEach(ch => {
+    const b = document.createElement('span');
+    b.className = 'ch-badge loading';
+    b.textContent = ch;
+    b.id = `badge-${ch}`;
+    document.getElementById('channelStatus').appendChild(b);
+    badges[ch] = b;
+  });
+
+  let done = 0;
+  let errors = 0;
+
+  const promises = CHANNELS.map(channel =>
+    fetchChannel(channel)
+      .then(candidates => {
+        done++;
+        badges[channel].className = 'ch-badge done';
+        allCandidates.push(...candidates);
+        log(`✓ ${channel}: ${candidates.length} candidates found`);
+        updateProgress(done, errors);
+        renderGrid();
+      })
+      .catch(err => {
+        done++;
+        errors++;
+        badges[channel].className = 'ch-badge error';
+        log(`✗ ${channel}: ${err.message}`);
+        updateProgress(done, errors);
+      })
+  );
+
+  Promise.all(promises).then(() => {
+    scanning = false;
+    document.getElementById('scanBtn').disabled = false;
+    document.getElementById('scanBtn').textContent = '🔍 Scan Again';
+    document.getElementById('progressWrap').style.display = 'none';
+    document.getElementById('filterRow').style.display = 'flex';
+    document.getElementById('lastScan').textContent = new Date().toLocaleString();
+    log(`✅ Scan complete. ${allCandidates.length} total candidates from ${CHANNELS.length - errors} channels.`);
+    renderGrid();
+  });
+}
+
+async function fetchChannel(channel) {
+  // Use the Vercel proxy to avoid CORS
+  const url = `/api/proxy?channel=${encodeURIComponent(channel)}`;
+  const resp = await fetch(url);
+  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const html = await resp.text();
+  return parseMessages(html, channel);
+}
+
+function parseMessages(html, channel) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  const msgs = doc.querySelectorAll('.tgme_widget_message');
+  const cutoff = Date.now() - 10 * 24 * 60 * 60 * 1000;
+  const results = [];
+
+  msgs.forEach(msg => {
+    const timeEl = msg.querySelector('time');
+    if (!timeEl) return;
+    const dt = new Date(timeEl.getAttribute('datetime'));
+    if (dt.getTime() < cutoff) return;
+
+    const textEl = msg.querySelector('.tgme_widget_message_text');
+    if (!textEl) return;
+    const text = textEl.innerText || textEl.textContent || '';
+    if (text.length < 80) return;
+
+    // Stop word filter
+    const lowerText = text.toLowerCase();
+    if (STOP_WORDS.some(w => lowerText.includes(w))) return;
+
+    // Keyword match
+    const matched = IT_KEYWORDS.filter(kw => lowerText.includes(kw.toLowerCase()));
+    if (matched.length === 0) return;
+
+    // Score
+    const score = matched.length >= 5 ? 'high' : matched.length >= 2 ? 'med' : 'low';
+
+    // Author
+    const authorEl = msg.querySelector('.tgme_widget_message_author_name') || msg.querySelector('.tgme_widget_message_from_author');
+    const author = authorEl ? authorEl.textContent.trim() : `@${channel}`;
+
+    // Message link
+    const linkEl = msg.querySelector('.tgme_widget_message_date');
+    const link = linkEl ? linkEl.getAttribute('href') : `https://t.me/${channel}`;
+
+    results.push({ channel, text: text.slice(0, 800), date: dt, author, matched, score, link });
+  });
+
+  return results;
+}
+
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  const search = document.getElementById('searchInput').value.toLowerCase();
+
+  let filtered = allCandidates.filter(c => {
+    if (currentFilter === 'high' && c.score !== 'high') return false;
+    if (currentFilter === 'dev' && !c.matched.some(k => ['python','javascript','typescript','java','kotlin','swift','golang','go','rust','c++','c#','react','vue','angular','node','django','fastapi','spring','backend','frontend','fullstack'].includes(k))) return false;
+    if (currentFilter === 'data' && !c.matched.some(k => ['data science','machine learning','ml','ai','nlp','computer vision','sql','postgresql','mongodb'].includes(k))) return false;
+    if (currentFilter === 'pm' && !c.matched.some(k => ['product manager','pm','scrum','agile','ux','ui','figma'].includes(k))) return false;
+    if (currentFilter === 'devops' && !c.matched.some(k => ['docker','kubernetes','aws','gcp','azure','terraform','ci/cd','devops','sre','linux','nginx'].includes(k))) return false;
+    if (search && !c.text.toLowerCase().includes(search) && !c.author.toLowerCase().includes(search) && !c.matched.join(' ').includes(search)) return false;
+    return true;
+  });
+
+  // Sort by score then date
+  filtered.sort((a,b) => {
+    const scoreOrder = {high:0,med:1,low:2};
+    if (scoreOrder[a.score] !== scoreOrder[b.score]) return scoreOrder[a.score] - scoreOrder[b.score];
+    return b.date - a.date;
+  });
+
+  const high = filtered.filter(c => c.score === 'high').length;
+  document.getElementById('statHigh').textContent = high;
+
+  if (filtered.length === 0 && allCandidates.length > 0) {
+    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="icon">🔍</div><p>No matches for current filter</p><small>Try a different keyword or filter</small></div>';
+    return;
+  }
+
+  const EMOJIS = ['👨‍💻','👩‍💻','🧑‍💻','👨‍🔬','👩‍🔬','🧑‍🎨','👨‍🎨','💻','🚀'];
+
+  grid.innerHTML = filtered.map(c => {
+    const emoji = EMOJIS[Math.abs(hashStr(c.author)) % EMOJIS.length];
+    const scoreClass = c.score === 'high' ? 'score-high' : c.score === 'med' ? 'score-med' : 'score-low';
+    const scoreLabel = c.score === 'high' ? '⭐ High' : c.score === 'med' ? '✓ Match' : 'Low';
+    const dateStr = c.date.toLocaleDateString('en-GB', {day:'numeric',month:'short'});
+    const tags = c.matched.slice(0,6).map(t => `<span class="tag">${t}</span>`).join('');
+
+    return `<div class="card">
+      <div class="card-header">
+        <div class="avatar">${emoji}</div>
+        <div class="card-meta">
+          <div class="card-name">${escHtml(c.author)}</div>
+          <div class="card-channel">@${c.channel}</div>
+        </div>
+        <div class="card-date">${dateStr}</div>
+      </div>
+      <div class="card-text">${escHtml(c.text)}</div>
+      <div class="card-tags">${tags}</div>
+      <div class="card-footer">
+        <a href="${c.link}" target="_blank" class="link-btn">Open in Telegram</a>
+        <button class="link-btn" onclick="copyText(\`${escAttr(c.text)}\`)">Copy text</button>
+        <span class="score-badge ${scoreClass}">${scoreLabel}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function updateStats() {
+  document.getElementById('statCandidates').textContent = allCandidates.length;
+  document.getElementById('statChannels').textContent = document.querySelectorAll('.ch-badge.done').length;
+  document.getElementById('statErrors').textContent = document.querySelectorAll('.ch-badge.error').length;
+}
+
+function updateProgress(done, errors) {
+  const pct = Math.round(done / CHANNELS.length * 100);
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressLabel').textContent = `Scanning ${done}/${CHANNELS.length} channels...`;
+  updateStats();
+}
+
+function filterCards() { renderGrid(); }
+
+function setFilter(f, btn) {
+  currentFilter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGrid();
+}
+
+function clearResults() {
+  allCandidates = [];
+  document.getElementById('grid').innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="icon">📡</div><p>No candidates yet</p><small>Click "Scan Channels" to fetch the latest IT posts</small></div>';
+  document.getElementById('channelStatus').innerHTML = '';
+  document.getElementById('filterRow').style.display = 'none';
+  updateStats();
+}
+
+function copyText(text) { navigator.clipboard.writeText(text).catch(() => {}); }
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function escAttr(s) { return s.replace(/`/g,"'").replace(/\\/g,'\\\\'); }
+function hashStr(s) { let h=0; for(let i=0;i<s.length;i++){h=Math.imul(31,h)+s.charCodeAt(i)|0;} return h; }
+</script>
+</body>
+</html>
