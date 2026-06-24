@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>YQN Pay — Talent Radar</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c26;
+    --border: #2a2a3a;
+    --accent: #6c5ce7;
+    --accent2: #a29bfe;
+    --gold: #fdcb6e;
+    --green: #00b894;
+    --red: #e17055;
+    --text: #e8e8f0;
+    --muted: #7070a0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; }
+
+  header {
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface);
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-mark {
+    width: 34px; height: 34px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 13px; color: white;
+  }
+  .logo-text { font-size: 15px; font-weight: 600; }
+  .logo-sub { font-size: 10px; color: var(--muted); }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .status-pill {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 12px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 20px;
+    font-size: 11px; color: var(--muted);
+  }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+  .dot.scanning { animation: pulse 0.8s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .scan-btn {
+    padding: 8px 18px; background: var(--accent); border: none;
+    border-radius: 8px; color: white; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: opacity 0.2s;
+  }
+  .scan-btn:hover { opacity: 0.85; }
+  .scan-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .main { display: grid; grid-template-columns: 260px 1fr; height: calc(100vh - 69px); }
+
+  .sidebar {
+    background: var(--surface); border-right: 1px solid var(--border);
+    overflow-y: auto; padding: 18px 16px;
+  }
+  .sidebar-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 1.2px;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 8px; margin-top: 18px;
+  }
+  .sidebar-label:first-child { margin-top: 0; }
+  .filter-chip {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 7px 10px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; font-size: 12px; cursor: pointer; margin-bottom: 5px;
+    transition: all 0.15s; user-select: none;
+  }
+  .filter-chip.active { border-color: var(--accent); background: rgba(108,92,231,0.15); color: var(--accent2); }
+  .filter-chip:hover { border-color: var(--accent); }
+  .chip-count {
+    font-size: 10px; padding: 1px 6px; background: var(--border);
+    border-radius: 10px; color: var(--muted);
+  }
+  .filter-chip.active .chip-count { background: var(--accent); color: white; }
+
+  .ch-item {
+    display: flex; align-items: center; gap: 7px;
+    font-size: 11px; color: var(--muted); padding: 4px 6px; border-radius: 5px;
+    margin-bottom: 3px;
+  }
+  .ch-item.scanning { color: var(--accent2); background: rgba(108,92,231,0.08); }
+  .ch-item.done { color: var(--green); }
+  .ch-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+  .ch-dot.scanning { background: var(--accent); animation: pulse 0.8s infinite; }
+  .ch-dot.done { background: var(--green); }
+
+  .content { overflow-y: auto; padding: 20px 24px; }
+  .stats-bar { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 18px; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 16px;
+  }
+  .stat-value { font-size: 22px; font-weight: 700; margin-bottom: 2px; }
+  .stat-label { font-size: 10px; color: var(--muted); }
+
+  .content-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .results-count { font-size: 12px; color: var(--muted); }
+  .results-count b { color: var(--text); }
+  .sort-select {
+    padding: 5px 10px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text); font-size: 11px; cursor: pointer;
+  }
+
+  .candidate-grid { display: flex; flex-direction: column; gap: 10px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 18px; transition: border-color 0.15s;
+  }
+  .card:hover { border-color: rgba(108,92,231,0.5); }
+  .card.top { border-color: rgba(108,92,231,0.4); background: linear-gradient(135deg, rgba(108,92,231,0.05), var(--surface)); }
+  .card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 8px; }
+  .card-left { display: flex; align-items: center; gap: 10px; }
+  .avatar {
+    width: 38px; height: 38px; border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 13px; flex-shrink: 0;
+  }
+  .cname { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+  .cmeta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .role-pill {
+    font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px;
+  }
+  .sep { font-size: 10px; color: var(--border); }
+  .small { font-size: 10px; color: var(--muted); }
+  .top-badge {
+    font-size: 9px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase;
+    color: var(--accent2); padding: 2px 6px; background: rgba(108,92,231,0.2);
+    border-radius: 10px; border: 1px solid rgba(108,92,231,0.4);
+  }
+  .score-ring {
+    width: 42px; height: 42px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 13px; flex-shrink: 0;
+  }
+  .s-high { background: rgba(0,184,148,0.15); color: var(--green); border: 2px solid var(--green); }
+  .s-mid { background: rgba(253,203,110,0.15); color: var(--gold); border: 2px solid var(--gold); }
+  .s-low { background: rgba(100,100,160,0.1); color: var(--muted); border: 2px solid var(--border); }
+
+  .csummary { font-size: 11px; color: var(--muted); line-height: 1.55; margin-bottom: 8px; }
+  .ctags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+  .tag {
+    padding: 2px 7px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 4px; font-size: 10px; color: var(--muted);
+  }
+  .tag.match { border-color: var(--accent); color: var(--accent2); background: rgba(108,92,231,0.1); }
+  .cfoot { display: flex; align-items: center; justify-content: space-between; }
+  .fit-note { font-size: 11px; color: var(--green); display: flex; align-items: center; gap: 5px; }
+  .ai-insight { font-size: 10px; color: var(--muted); font-style: italic; margin-top: 4px; }
+
+  .msg-btn {
+    padding: 5px 13px; background: transparent; border: 1px solid var(--accent);
+    border-radius: 6px; color: var(--accent2); font-size: 11px; font-weight: 600;
+    cursor: pointer; text-decoration: none; transition: all 0.15s; display: inline-block;
+  }
+  .msg-btn:hover { background: var(--accent); color: white; }
+
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-icon { font-size: 36px; margin-bottom: 10px; }
+  .empty-title { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
+  .empty-sub { font-size: 12px; line-height: 1.6; max-width: 340px; margin: 0 auto; }
+
+  .loading { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 60px 20px; gap: 12px; }
+  .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .prog-bar { width: 220px; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .prog-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.4s; }
+
+  .warning-banner {
+    background: rgba(253,203,110,0.1); border: 1px solid rgba(253,203,110,0.3);
+    border-radius: 8px; padding: 10px 14px; margin-bottom: 16px;
+    font-size: 11px; color: var(--gold); line-height: 1.5; display: none;
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">YQ</div>
+    <div>
+      <div class="logo-text">Talent Radar</div>
+      <div class="logo-sub">Live — 11 Russian IT channels</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="status-pill">
+      <div class="dot" id="statusDot"></div>
+      <span id="statusText">Ready</span>
+    </div>
+    <button class="scan-btn" id="scanBtn" onclick="startScan()">Scan Now</button>
+  </div>
+</header>
+
+<div class="main">
+  <div class="sidebar">
+
+    <div class="sidebar-label">YQN Open Roles</div>
+    <div id="roleFilters">
+      <div class="filter-chip active" data-role="all" onclick="filterRole(this)">All Roles <span class="chip-count" id="cAll">0</span></div>
+      <div class="filter-chip" data-role="backend" onclick="filterRole(this)">Kotlin/Java Backend <span class="chip-count" id="cBackend">0</span></div>
+      <div class="filter-chip" data-role="mobile" onclick="filterRole(this)">Mobile & Web Frontend <span class="chip-count" id="cMobile">0</span></div>
+      <div class="filter-chip" data-role="devops" onclick="filterRole(this)">DevOps / Infra <span class="chip-count" id="cDevops">0</span></div>
+      <div class="filter-chip" data-role="qa" onclick="filterRole(this)">QA / Testing <span class="chip-count" id="cQa">0</span></div>
+      <div class="filter-chip" data-role="data" onclick="filterRole(this)">Data / ML <span class="chip-count" id="cData">0</span></div>
+      <div class="filter-chip" data-role="security" onclick="filterRole(this)">Security <span class="chip-count" id="cSecurity">0</span></div>
+    </div>
+
+    <div class="sidebar-label">Match Score</div>
+    <div class="filter-chip active" data-score="all" onclick="filterScore(this)">All candidates</div>
+    <div class="filter-chip" data-score="high" onclick="filterScore(this)">Strong match 80+</div>
+    <div class="filter-chip" data-score="mid" onclick="filterScore(this)">Good match 60+</div>
+
+    <div class="sidebar-label">Channels</div>
+    <div id="channelList">
+      <div class="ch-item" id="ch0"><div class="ch-dot"></div>@geekjob</div>
+      <div class="ch-item" id="ch1"><div class="ch-dot"></div>@getit_jobs</div>
+      <div class="ch-item" id="ch2"><div class="ch-dot"></div>@remowork_ru</div>
+      <div class="ch-item" id="ch3"><div class="ch-dot"></div>@remoteit</div>
+      <div class="ch-item" id="ch4"><div class="ch-dot"></div>@it_vakansii_jobs</div>
+      <div class="ch-item" id="ch5"><div class="ch-dot"></div>@it_jobs_community</div>
+      <div class="ch-item" id="ch6"><div class="ch-dot"></div>@javascript_jobs</div>
+      <div class="ch-item" id="ch7"><div class="ch-dot"></div>@job_mobile</div>
+      <div class="ch-item" id="ch8"><div class="ch-dot"></div>@digital_jobs_remote</div>
+      <div class="ch-item" id="ch9"><div class="ch-dot"></div>@relocation_it</div>
+      <div class="ch-item" id="ch10"><div class="ch-dot"></div>@GeorgiaRelocated</div>
+    </div>
+
+    <div class="sidebar-label">Last Scan</div>
+    <div style="font-size:11px;color:var(--muted)" id="lastScanTime">Never</div>
+
+  </div>
+
+  <div class="content">
+    <div id="warningBanner" class="warning-banner">
+      ⚠ Bot token exposed — go to @BotFather, send <strong>/revoke</strong>, get a new token, and update the BOT_TOKEN value at the top of this file.
+    </div>
+
+    <div class="stats-bar" id="statsBar" style="display:none">
+      <div class="stat-card"><div class="stat-value" id="sTotal">0</div><div class="stat-label">Candidates found</div></div>
+      <div class="stat-card"><div class="stat-value" id="sStrong">0</div><div class="stat-label">Strong matches 80+</div></div>
+      <div class="stat-card"><div class="stat-value" id="sPosts">0</div><div class="stat-label">Posts scanned</div></div>
+      <div class="stat-card"><div class="stat-value">10</div><div class="stat-label">Days lookback</div></div>
+    </div>
+
+    <div class="content-header">
+      <div class="results-count" id="resultsCount">Click <b>Scan Now</b> to find candidates across 11 channels</div>
+      <select class="sort-select" id="sortSel" onchange="sortAndRender()" style="display:none">
+        <option value="score">Sort by match score</option>
+        <option value="date">Sort by date posted</option>
+        <option value="role">Sort by role</option>
+      </select>
+    </div>
+
+    <div id="grid" class="candidate-grid">
+      <div class="empty">
+        <div class="empty-icon">📡</div>
+        <div class="empty-title">Ready to scan</div>
+        <div class="empty-sub">Click "Scan Now" to analyse the last 10 days of posts across 11 Russian IT Telegram channels and surface candidates matching YQN Pay's open roles.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ───────────────────────────────────────────────
+const BOT_TOKEN = '8751611608:AAHHRlFhkA6IsL0D60dBNP5I91D9EMMvVB0';
+// ⚠ Revoke this token at @BotFather and replace with your new one
+// ──────────────────────────────────────────────────────────
+
+const CHANNELS = [
+  'geekjob','getit_jobs','remowork_ru','remoteit','it_vakansii_jobs',
+  'it_jobs_community','javascript_jobs','job_mobile','digital_jobs_remote',
+  'relocation_it','GeorgiaRelocated'
+];
+
+const LOOKBACK_DAYS = 10;
+
+const YQN_ROLES = {
+  backend: {
+    label: 'Kotlin/Java Backend',
+    color: '#6c5ce7',
+    keywords: ['kotlin','java','spring','spring boot','kafka','postgresql','redis','microservices','backend','бэкенд','jvm','hibernate','liquibase','gradle','maven'],
+    yqnFit: 'Core payment services, wallet engine, acquiring infrastructure'
+  },
+  mobile: {
+    label: 'Mobile & Web Frontend',
+    color: '#00b894',
+    keywords: ['react native','react','typescript','android','ios','swift','flutter','mobile','frontend','фронтенд','мобильн','kotlin android','swiftui','jetpack compose'],
+    yqnFit: 'Consumer wallet app, merchant portal, web interfaces'
+  },
+  devops: {
+    label: 'DevOps / Infrastructure',
+    color: '#fdcb6e',
+    keywords: ['devops','kubernetes','k8s','docker','terraform','ansible','ci/cd','gitlab','jenkins','aws','gcp','oci','sre','инфраструктур'],
+    yqnFit: 'OCI production infra, CI/CD pipelines, platform reliability'
+  },
+  qa: {
+    label: 'QA / Testing',
+    color: '#e17055',
+    keywords: ['qa','тестировщик','тестирование','quality assurance','automation','selenium','appium','pytest','junit','testng','cypress','playwright'],
+    yqnFit: 'Payment flow testing, mobile QA, regression suite'
+  },
+  data: {
+    label: 'Data / ML',
+    color: '#a29bfe',
+    keywords: ['data','ml','machine learning','python','pytorch','tensorflow','llm','ai','data engineer','data scientist','mlops','airflow','spark','аналитик данных'],
+    yqnFit: 'Fraud detection models, transaction analytics, AI components'
+  },
+  security: {
+    label: 'Security',
+    color: '#ff7675',
+    keywords: ['security','информационная безопасность','pentest','appsec','cybersecurity','pci','soc','безопасность','cissp','ceh','sast','dast'],
+    yqnFit: 'PCI DSS compliance, payment API security, HSM operations'
+  }
+};
+
+const FINTECH_BOOST = ['финтех','fintech','банк','bank','платеж','payment','эквайр','кошелек','wallet','tinkoff','тинькофф','sber','сбер','revolut','alfa','альфа','yandex pay','яндекс пей','ozon','озон','wildberries','вайлдберриз','маркетплейс','e-commerce','ecommerce','процессинг','processing'];
+const SEEK_KEYWORDS = ['ищу работу','в поиске','открыт к предложениям','looking for','seeking','резюме','cv','portfolio','рассмотрю предложения','ready to work','available'];
+const MOBILITY = ['удалён','remote','релокац','готов к переезду','london','лондон','georgia','грузия','тбилиси'];
+
+let allCandidates = [];
+let filtered = [];
+let activeRole = 'all';
+let activeScore = 'all';
+let totalPostsScanned = 0;
+
+async function fetchChannelPosts(channel) {
+  const cutoff = (Date.now() / 1000) - (LOOKBACK_DAYS * 86400);
+  try {
+    const url = `https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?allowed_updates=channel_post&limit=100`;
+    // Use getChatHistory via forwardMessage workaround — actually use public channel method
+    const resp = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ chat_id: '@' + channel, text: '.' })
+    });
+    // We actually use getChat to verify channel exists, then use updates
+    const chatResp = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChat?chat_id=@${channel}`);
+    const chatData = await chatResp.json();
+    if (!chatData.ok) return [];
+
+    // Get recent messages using search via bot API
+    // Bot API doesn't have getHistory for channels it's not in
+    // Use the channel's public messages via copyMessage approach
+    return []; // Will populate via real method below
+  } catch(e) { return []; }
+}
+
+// Real approach: use Telegram Bot API getUpdates after forwarding
+// Actually the cleanest approach for public channels is to use the
+// channel username with getChatAdministrators and then parse forwarded messages
+// The most reliable method: bot joins channel and gets updates
+// Since bot can read public channel info, we use searchMessages workaround
+
+async function getPublicChannelMessages(channel) {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - LOOKBACK_DAYS);
+  const cutoffTs = Math.floor(cutoffDate.getTime() / 1000);
+
+  try {
+    // Method: use getChat to confirm channel exists
+    const chatRes = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/getChat?chat_id=@${channel}`);
+    const chatData = await chatRes.json();
+    if (!chatData.ok) return { posts: [], channelTitle: channel };
+
+    const channelTitle = chatData.result.title || channel;
+    const channelId = chatData.result.id;
+
+    // Get updates — this works for channels the bot has been added to
+    // For public channels without bot membership, we scrape the preview
+    const previewRes = await fetch(`https://t.me/s/${channel}`, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TelegramBot/1.0)' }
+    });
+
+    if (!previewRes.ok) return { posts: [], channelTitle };
+
+    const html = await previewRes.text();
+    const posts = parseChannelHTML(html, channel, channelTitle, cutoffTs);
+    return { posts, channelTitle };
+
+  } catch(e) {
+    return { posts: [], channelTitle: channel };
+  }
+}
+
+function parseChannelHTML(html, channel, channelTitle, cutoffTs) {
+  const posts = [];
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+
+  const messages = doc.querySelectorAll('.tgme_widget_message');
+
+  messages.forEach(msg => {
+    try {
+      const textEl = msg.querySelector('.tgme_widget_message_text');
+      if (!textEl) return;
+      const text = textEl.innerText || textEl.textContent || '';
+      if (text.length < 50) return;
+
+      const timeEl = msg.querySelector('time');
+      const ts = timeEl ? new Date(timeEl.getAttribute('datetime')).getTime() / 1000 : Date.now() / 1000;
+      if (ts < cutoffTs) return;
+
+      const linkEl = msg.querySelector('.tgme_widget_message_date');
+      const msgUrl = linkEl ? linkEl.getAttribute('href') : `https://t.me/${channel}`;
+
+      posts.push({ text, ts, url: msgUrl, channel, channelTitle });
+    } catch(e) {}
+  });
+
+  return posts;
+}
+
+function classifyPost(post) {
+  const text = post.text.toLowerCase();
+
+  // Check if it's a candidate seeking work
+  const isSeeking = SEEK_KEYWORDS.some(k => text.includes(k));
+  if (!isSeeking) return null;
+
+  // Determine role
+  let role = null;
+  let maxMatches = 0;
+  for (const [r, config] of Object.entries(YQN_ROLES)) {
+    const matches = config.keywords.filter(k => text.includes(k)).length;
+    if (matches > maxMatches) { maxMatches = matches; role = r; }
+  }
+  if (!role || maxMatches === 0) return null;
+
+  // Extract tech stack
+  const allKeywords = Object.values(YQN_ROLES).flatMap(r => r.keywords);
+  const tech = [...new Set(allKeywords.filter(k => text.includes(k) && k.length > 2))].slice(0, 8);
+
+  // Fintech experience boost
+  const fintechScore = FINTECH_BOOST.filter(k => text.includes(k)).length;
+  const mobilityScore = MOBILITY.filter(k => text.includes(k)).length;
+
+  // Score calculation
+  let score = 40;
+  score += Math.min(maxMatches * 8, 30);
+  score += Math.min(fintechScore * 6, 20);
+  score += Math.min(mobilityScore * 3, 10);
+  if (tech.length > 4) score += 5;
+  score = Math.min(score, 98);
+
+  // Extract handle
+  const handleMatch = post.text.match(/@[a-zA-Z0-9_]{3,}/);
+  const handle = handleMatch ? handleMatch[0] : null;
+
+  // Level detection
+  const level = text.includes('senior') || text.includes('сениор') || text.includes('8 лет') || text.includes('7 лет') || text.includes('9 лет') ? 'Senior' :
+                text.includes('middle') || text.includes('мидл') || text.includes('4 года') || text.includes('5 лет') ? 'Middle' : 'Mid/Senior';
+
+  const daysAgo = Math.floor((Date.now() / 1000 - post.ts) / 86400);
+
+  return {
+    id: post.url,
+    text: post.text.slice(0, 280) + (post.text.length > 280 ? '...' : ''),
+    channel: '@' + post.channel,
+    channelTitle: post.channelTitle,
+    url: post.url,
+    handle,
+    role,
+    level,
+    score,
+    tech,
+    fintechExp: fintechScore > 0,
+    mobility: mobilityScore > 0,
+    daysAgo,
+    ts: post.ts
+  };
+}
+
+function getInitials(text) {
+  const words = text.replace(/@\S+/g,'').trim().split(/\s+/).filter(w => w.length > 1);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  return text.slice(0,2).toUpperCase();
+}
+
+function scoreClass(s) { return s >= 80 ? 's-high' : s >= 60 ? 's-mid' : 's-low'; }
+
+function daysText(d) { return d === 0 ? 'today' : d === 1 ? 'yesterday' : `${d}d ago`; }
+
+function renderCard(c) {
+  const role = YQN_ROLES[c.role];
+  const color = role.color;
+  const isTop = c.score >= 80;
+  const tags = c.tech.map(t => {
+    const isMatch = role.keywords.includes(t);
+    return `<span class="tag ${isMatch?'match':''}">${t}</span>`;
+  }).join('');
+
+  return `
+  <div class="card ${isTop?'top':''}">
+    <div class="card-top">
+      <div class="card-left">
+        <div class="avatar" style="background:${color}22;color:${color}">${getInitials(c.text)}</div>
+        <div>
+          <div class="cname">${c.handle || 'Anonymous'} ${c.handle ? '' : ''}</div>
+          <div class="cmeta">
+            <span class="role-pill" style="background:${color}22;color:${color}">${role.label}</span>
+            <span class="sep">•</span>
+            <span class="small">${c.level}</span>
+            <span class="sep">•</span>
+            <span class="small">${c.channel}</span>
+            <span class="sep">•</span>
+            <span class="small">${daysText(c.daysAgo)}</span>
+            ${isTop ? '<span class="top-badge">Top Match</span>' : ''}
+          </div>
+        </div>
+      </div>
+      <div class="score-ring ${scoreClass(c.score)}">${c.score}</div>
+    </div>
+    <div class="csummary">${c.text}</div>
+    ${tags ? `<div class="ctags">${tags}</div>` : ''}
+    <div class="cfoot">
+      <div>
+        <div class="fit-note">✦ YQN fit: ${role.yqnFit}</div>
+        ${c.fintechExp ? '<div class="ai-insight">Fintech background detected</div>' : ''}
+      </div>
+      ${c.handle ?
+        `<a class="msg-btn" href="https://t.me/${c.handle.replace('@','')}" target="_blank">Message</a>` :
+        `<a class="msg-btn" href="${c.url}" target="_blank">View Post</a>`
+      }
+    </div>
+  </div>`;
+}
+
+function updateCounts() {
+  const roles = ['backend','mobile','devops','qa','data','security'];
+  document.getElementById('cAll').textContent = allCandidates.length;
+  roles.forEach(r => {
+    document.getElementById('c' + r.charAt(0).toUpperCase() + r.slice(1)).textContent =
+      allCandidates.filter(c => c.role === r).length;
+  });
+  document.getElementById('sTotal').textContent = allCandidates.length;
+  document.getElementById('sStrong').textContent = allCandidates.filter(c => c.score >= 80).length;
+  document.getElementById('sPosts').textContent = totalPostsScanned;
+}
+
+function applyFilters() {
+  filtered = allCandidates.filter(c => {
+    const roleOk = activeRole === 'all' || c.role === activeRole;
+    const scoreOk = activeScore === 'all' ||
+      (activeScore === 'high' && c.score >= 80) ||
+      (activeScore === 'mid' && c.score >= 60);
+    return roleOk && scoreOk;
+  });
+  document.getElementById('resultsCount').innerHTML =
+    `Showing <b>${filtered.length}</b> of <b>${allCandidates.length}</b> candidates`;
+  const grid = document.getElementById('grid');
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">No candidates match this filter</div><div class="empty-sub">Try adjusting your filters.</div></div>`;
+  } else {
+    grid.innerHTML = filtered.map(renderCard).join('');
+  }
+}
+
+function filterRole(el) {
+  document.querySelectorAll('[data-role]').forEach(e => e.classList.remove('active'));
+  el.classList.add('active');
+  activeRole = el.dataset.role;
+  applyFilters();
+}
+
+function filterScore(el) {
+  document.querySelectorAll('[data-score]').forEach(e => e.classList.remove('active'));
+  el.classList.add('active');
+  activeScore = el.dataset.score;
+  applyFilters();
+}
+
+function sortAndRender() {
+  const v = document.getElementById('sortSel').value;
+  if (v === 'score') filtered.sort((a,b) => b.score - a.score);
+  if (v === 'date') filtered.sort((a,b) => a.daysAgo - b.daysAgo);
+  if (v === 'role') filtered.sort((a,b) => a.role.localeCompare(b.role));
+  document.getElementById('grid').innerHTML = filtered.map(renderCard).join('');
+}
+
+async function startScan() {
+  const btn = document.getElementById('scanBtn');
+  btn.disabled = true;
+  btn.textContent = 'Scanning...';
+  document.getElementById('statusDot').classList.add('scanning');
+  document.getElementById('statusText').textContent = 'Scanning...';
+  document.getElementById('statsBar').style.display = 'grid';
+  document.getElementById('sortSel').style.display = 'block';
+  document.getElementById('warningBanner').style.display = 'block';
+
+  document.getElementById('grid').innerHTML = `
+    <div class="loading">
+      <div class="spinner"></div>
+      <div style="font-size:13px;color:var(--muted)">Scanning 11 channels...</div>
+      <div style="font-size:11px;color:var(--border);text-align:center;max-width:260px;line-height:1.5">
+        Reading posts from the last 10 days and scoring candidates against YQN Pay roles
+      </div>
+      <div class="prog-bar"><div class="prog-fill" id="prog" style="width:0%"></div></div>
+    </div>`;
+
+  allCandidates = [];
+  totalPostsScanned = 0;
+
+  for (let i = 0; i < CHANNELS.length; i++) {
+    const channel = CHANNELS[i];
+    const chEl = document.getElementById(`ch${i}`);
+    const dotEl = chEl?.querySelector('.ch-dot');
+
+    if (chEl) { chEl.classList.add('scanning'); dotEl?.classList.add('scanning'); }
+    document.getElementById('statusText').textContent = `@${channel}`;
+    document.getElementById('prog').style.width = `${((i+0.5)/CHANNELS.length)*100}%`;
+
+    const { posts } = await getPublicChannelMessages(channel);
+    totalPostsScanned += posts.length;
+
+    posts.forEach(post => {
+      const candidate = classifyPost(post);
+      if (candidate) allCandidates.push(candidate);
+    });
+
+    if (chEl) {
+      chEl.classList.remove('scanning'); chEl.classList.add('done');
+      dotEl?.classList.remove('scanning'); dotEl?.classList.add('done');
+    }
+    document.getElementById('prog').style.width = `${((i+1)/CHANNELS.length)*100}%`;
+
+    await new Promise(r => setTimeout(r, 150));
+  }
+
+  // Deduplicate by handle
+  const seen = new Set();
+  allCandidates = allCandidates.filter(c => {
+    const key = c.handle || c.url;
+    if (seen.has(key)) return false;
+    seen.add(key); return true;
+  });
+
+  allCandidates.sort((a,b) => b.score - a.score);
+
+  updateCounts();
+  applyFilters();
+
+  btn.disabled = false;
+  btn.textContent = 'Re-scan';
+  document.getElementById('statusDot').classList.remove('scanning');
+  document.getElementById('statusText').textContent = 'Live';
+
+  const now = new Date();
+  document.getElementById('lastScanTime').textContent =
+    now.toLocaleDateString('en-GB') + ' ' + now.toLocaleTimeString('en-GB', {hour:'2-digit',minute:'2-digit'});
+}
+
+// Show warning about exposed token on load
+window.addEventListener('load', () => {
+  document.getElementById('warningBanner').style.display = 'block';
+});
+</script>
+
+</body>
+</html>
